@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compliance Lens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0a0a0f; --surface:#12121a; --surface2:#1a1a25;
+      --border:#2a2a3a; --text:#e8e8f0; --muted:#888899; --faint:#555566;
+      --primary:#6366f1; --primaryHover:#818cf8; --primaryHi:#312e81;
+      --warn:#f59e0b; --warnHi:#451a03;
+      --err:#ef4444; --errHi:#450a0a;
+      --ok:#22c55e; --okHi:#052e16;
+      --accent:#a855f7;
+    }
+    [data-theme="dark"] {
+      --bg:#f4f4f8; --surface:#ffffff; --surface2:#f0f0f5;
+      --border:#d8d8e8; --text:#1a1a28; --muted:#666677; --faint:#aaaabc;
+      --primary:#4f46e5; --primaryHover:#4338ca; --primaryHi:#e0e7ff;
+      --warn:#d97706; --warnHi:#fef3c7;
+      --err:#dc2626; --errHi:#fee2e2;
+      --ok:#16a34a; --okHi:#dcfce7;
+      --accent:#9333ea;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh}
+    button,input,textarea,select{font:inherit;font-family:'Plus Jakarta Sans',sans-serif}
+
+    /* ── Layout ── */
+    .app{max-width:1320px;margin:0 auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+
+    /* ── Topbar ── */
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--accent));display:grid;place-items:center;flex-shrink:0}
+    .brand h1{font-size:20px;font-weight:800;letter-spacing:-0.02em}
+    .brand p{font-size:12px;color:var(--muted);margin-top:2px}
+    .topbar-actions{display:flex;align-items:center;gap:10px}
+
+    /* ── Buttons ── */
+    .btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:background 0.13s,transform 0.13s;white-space:nowrap}
+    .btn:hover{background:var(--surface2);transform:translateY(-1px)}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.primary:hover{background:var(--primaryHover)}
+    .btn svg{flex-shrink:0}
+
+    /* ── Language toggle ── */
+    .lang-wrap{display:inline-flex;align-items:center;gap:6px}
+    .lang-lbl{font-size:11px;font-weight:700;letter-spacing:0.07em;color:var(--faint);transition:color 0.15s}
+    .lang-lbl.on{color:var(--primary)}
+    .lang-switch{position:relative;width:48px;height:24px;cursor:pointer;flex-shrink:0}
+    .lang-switch input{position:absolute;opacity:0;width:0;height:0}
+    .lang-track{position:absolute;inset:0;border-radius:999px;background:var(--surface2);border:1px solid var(--border);transition:background 0.2s}
+    .lang-switch input:checked + .lang-track{background:linear-gradient(135deg,var(--primary),var(--accent));border-color:transparent}
+    .lang-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);transition:transform 0.2s cubic-bezier(.4,0,.2,1)}
+    .lang-switch input:checked ~ .lang-thumb{transform:translateX(24px)}
+
+    /* ── Theme button ── */
+    .btn-icon{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:9px;width:36px;height:36px;cursor:pointer;display:grid;place-items:center;transition:background 0.13s}
+    .btn-icon:hover{background:var(--surface2);color:var(--text)}
+
+    /* ── Status bar ── */
+    .statusbar{padding:12px 16px;border-radius:11px;border:1px solid var(--border);background:var(--surface2);font-size:13px;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:10px}
+    .statusbar.ok{background:var(--okHi);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 25%,transparent)}
+    .statusbar.warn{background:var(--warnHi);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
+    .statusbar.err{background:var(--errHi);color:var(--err);border-color:color-mix(in srgb,var(--err) 25%,transparent)}
+    .statusbar .spinner{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Main two-column ── */
+    .main{display:grid;grid-template-columns:400px 1fr;gap:20px;align-items:start}
+
+    /* ── Input card ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px}
+    .card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--faint);margin-bottom:18px}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+    .field:last-child{margin-bottom:0}
+    .field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)}
+    .field input,.field textarea,.field select{
+      border:1px solid var(--border);background:var(--surface2);color:var(--text);
+      border-radius:9px;padding:10px 13px;font-size:13px;outline:none;
+      transition:border-color 0.15s;width:100%
+    }
+    .field input:focus,.field textarea:focus{border-color:var(--primary)}
+    .field textarea{min-height:140px;resize:vertical;line-height:1.65;font-family:'JetBrains Mono',monospace;font-size:12px}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field-helper{font-size:11px;color:var(--faint);line-height:1.4}
+    .card-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
+
+    /* ── Results panel ── */
+    .results{display:flex;flex-direction:column;gap:16px}
+
+    /* ── Summary card ── */
+    .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;display:flex;align-items:flex-start;gap:14px}
+    .summary-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+    .summary-icon.ok{background:var(--okHi);color:var(--ok)}
+    .summary-icon.warn{background:var(--warnHi);color:var(--warn)}
+    .summary-icon.err{background:var(--errHi);color:var(--err)}
+    .summary-icon.idle{background:var(--surface2);color:var(--faint)}
+    .summary-text strong{font-size:13px;font-weight:700;display:block;margin-bottom:4px}
+    .summary-text span{font-size:12px;color:var(--muted);line-height:1.5}
+    .stat-chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .stat-chip{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--surface2);color:var(--muted)}
+    .stat-chip.red{background:var(--errHi);color:var(--err);border-color:color-mix(in srgb,var(--err) 20%,transparent)}
+    .stat-chip.yellow{background:var(--warnHi);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 20%,transparent)}
+    .stat-chip.green{background:var(--okHi);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 20%,transparent)}
+
+    /* ── Compare panel ── */
+    .compare-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    .compare-head{display:flex;border-bottom:1px solid var(--border)}
+    .compare-tab{flex:1;padding:13px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--faint);cursor:pointer;border:none;background:none;display:flex;align-items:center;gap:8px;transition:color 0.15s,background 0.15s;border-bottom:2px solid transparent}
+    .compare-tab:hover{color:var(--text);background:var(--surface2)}
+    .compare-tab.active{color:var(--text);border-bottom-color:var(--primary)}
+    .compare-tab-divider{width:1px;background:var(--border)}
+    .compare-body{display:grid;grid-template-columns:1fr 1fr}
+    .compare-col{padding:14px;display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto}
+    .compare-col+.compare-col{border-left:1px solid var(--border)}
+    .sent-item{padding:13px;border-radius:11px;background:var(--surface2);border:1px solid transparent;font-size:13px;line-height:1.6}
+    .sent-item .sent-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--faint);margin-bottom:6px;display:block}
+    .sent-item.flagged{border-color:color-mix(in srgb,var(--err) 30%,var(--border));background:color-mix(in srgb,var(--errHi) 40%,var(--surface2))}
+    .fb-item{padding:13px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);font-size:13px;line-height:1.55}
+    .fb-item .sent-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--faint);margin-bottom:6px;display:block}
+    .fb-item.high{border-color:color-mix(in srgb,var(--err) 35%,var(--border));background:color-mix(in srgb,var(--errHi) 40%,var(--surface2))}
+    .fb-item.medium{border-color:color-mix(in srgb,var(--warn) 35%,var(--border));background:color-mix(in srgb,var(--warnHi) 40%,var(--surface2))}
+    .fb-item.low{border-color:color-mix(in srgb,var(--ok) 35%,var(--border));background:color-mix(in srgb,var(--okHi) 40%,var(--surface2))}
+    .fb-item p{margin:5px 0;font-size:12px}
+    .fb-item strong{font-weight:700;color:var(--text)}
+    .fb-clean{font-size:12px;color:var(--faint);font-style:italic}
+
+    /* ── Revised draft ── */
+    .revised-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    .revised-head{padding:13px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--faint);display:flex;align-items:center;justify-content:space-between}
+    .revised-body{padding:18px 20px;font-size:13px;line-height:1.75;color:var(--muted);white-space:pre-wrap;min-height:80px}
+    .revised-body.has-content{color:var(--text)}
+
+    /* ── Flags list ── */
+    .flags-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    .flags-head{padding:13px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--faint)}
+    .flag-item{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+    .flag-item:last-child{border-bottom:none}
+    .flag-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em}
+    .badge.high{background:var(--errHi);color:var(--err)}
+    .badge.medium{background:var(--warnHi);color:var(--warn)}
+    .badge.low{background:var(--okHi);color:var(--ok)}
+    .badge.type{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+    .flag-quote{padding:10px 14px;border-left:3px solid var(--err);background:var(--surface2);border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+    .flag-detail{font-size:12px;line-height:1.55;color:var(--muted)}
+    .flag-detail strong{color:var(--text);font-weight:600}
+
+    /* ── Placeholder / empty ── */
+    .empty{padding:40px 20px;text-align:center;color:var(--faint);font-size:13px}
+
+    /* ── Risk guide ── */
+    .guide-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .guide-item{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px}
+    .guide-item strong{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);display:block;margin-bottom:8px}
+    .guide-quote{font-size:12px;line-height:1.6;color:var(--faint);padding-left:10px;border-left:2px solid var(--border)}
+
+    @media(max-width:960px){.main{grid-template-columns:1fr}.guide-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Topbar ── -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Compliance Lens</h1>
+        <p id="subtitle"></p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" id="loadDemoBtn"></button>
+
+      <div class="lang-wrap" title="언어 전환 / Switch Language">
+        <span class="lang-lbl on" id="lblKo">KO</span>
+        <label class="lang-switch">
+          <input type="checkbox" id="langToggle" />
+          <div class="lang-track"></div>
+          <div class="lang-thumb"></div>
+        </label>
+        <span class="lang-lbl" id="lblEn">EN</span>
+      </div>
+
+      <button class="btn" id="apiKeyBtn" onclick="openApiKeyDialog()" title="API 키 설정">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <span id="apiKeyBtnLabel">API 키 설정</span>
+      </button>
+
+      <button class="btn-icon" id="themeToggle" title="테마 전환">
+        <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- API Key Dialog -->
+  <div id="apiKeyOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <strong style="font-size:15px" id="dlgTitle">API 키 설정</strong>
+        <button onclick="closeApiKeyDialog()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)" id="dlgLabel">Claude API Key</label>
+        <input id="apiKeyInput" type="password"
+          style="border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:9px;padding:11px 14px;font-size:13px;outline:none;width:100%"
+          placeholder="sk-ant-api03-..."
+          onfocus="this.style.borderColor='var(--primary)'"
+          onblur="this.style.borderColor='var(--border)'"
+        />
+        <span style="font-size:11px;color:var(--faint)" id="dlgHint">console.anthropic.com 에서 발급한 키를 입력하세요. 브라우저 localStorage에만 저장됩니다.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)" id="dlgModelLabel">모델</label>
+        <select id="modelSelect"
+          style="border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:9px;padding:11px 14px;font-size:13px;outline:none;width:100%">
+          <option value="claude-sonnet-4-6">claude-sonnet-4-6 (권장)</option>
+          <option value="claude-opus-4-6">claude-opus-4-6 (최고 품질)</option>
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001 (빠름)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="closeApiKeyDialog()" class="btn" id="dlgCancel">취소</button>
+        <button onclick="saveApiKey()" class="btn primary" id="dlgSave">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <div id="statusBar" class="statusbar"></div>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- LEFT: Input -->
+    <div class="card">
+      <div class="card-title" id="cardInputTitle"></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label id="lblAudience"></label>
+          <input id="persona" />
+        </div>
+        <div class="field">
+          <label id="lblTopic"></label>
+          <input id="topic" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="lblMessage"></label>
+        <input id="message" />
+      </div>
+
+      <div class="field">
+        <label id="lblDraft"></label>
+        <textarea id="draft"></textarea>
+        <span class="field-helper" id="helperDraft"></span>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn primary" id="analyzeBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span id="btnAnalyzeLabel"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div class="results">
+
+      <!-- Summary -->
+      <div class="summary-card" id="summaryCard">
+        <div class="summary-icon idle" id="summaryIcon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="summary-text">
+          <strong id="summaryTitle"></strong>
+          <span id="summaryBody"></span>
+          <div class="stat-chips" id="statChips" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Compare: Original vs Feedback -->
+      <div class="compare-wrap">
+        <div class="compare-head">
+          <div style="padding:13px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);display:flex;align-items:center;gap:8px;flex:1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span id="panelOriginal"></span>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div style="padding:13px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);display:flex;align-items:center;gap:8px;flex:1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span id="panelFeedback"></span>
+          </div>
+        </div>
+        <div class="compare-body">
+          <div class="compare-col" id="originalList"></div>
+          <div class="compare-col" id="feedbackList"></div>
+        </div>
+      </div>
+
+      <!-- Revised draft -->
+      <div class="revised-wrap">
+        <div class="revised-head">
+          <span id="h2Revised"></span>
+        </div>
+        <div class="revised-body" id="revisedDraftBox"></div>
+      </div>
+
+      <!-- Flags detail -->
+      <div class="flags-wrap">
+        <div class="flags-head" id="h2Flags"></div>
+        <div id="flagList"></div>
+      </div>
+
+      <!-- Risk Guide -->
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--faint);margin-bottom:12px" id="h2Guide"></div>
+        <div class="guide-grid">
+          <div class="guide-item">
+            <strong id="guide1Title"></strong>
+            <div class="guide-quote" id="guide1Body"></div>
+          </div>
+          <div class="guide-item">
+            <strong id="guide2Title"></strong>
+            <div class="guide-quote" id="guide2Body"></div>
+          </div>
+          <div class="guide-item">
+            <strong id="guide3Title"></strong>
+            <div class="guide-quote" id="guide3Body"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ─── Strings ──────────────────────────────────────────────────────────────────
+const STR = {
+  ko:{
+    subtitle:'AI 기반 금융 콘텐츠 검토 도구',
+    loadDemo:'데모 불러오기',
+    cardInputTitle:'초안 입력',
+    lblAudience:'대상 독자', phAudience:'예: 개인 투자자',
+    lblTopic:'주제', phTopic:'예: S&P 500 ETF 기초',
+    lblMessage:'핵심 메시지', phMessage:'예: 분산투자 효과를 과장 없이 설명',
+    lblDraft:'초안 내용', phDraft:'검토할 내용을 붙여넣으세요...',
+    helperDraft:'문장 부호를 기준으로 자동 분리됩니다.',
+    btnAnalyze:'분석하기',
+    panelOriginal:'원문', panelFeedback:'피드백',
+    h2Revised:'수정 초안', h2Flags:'플래그 상세', h2Guide:'리스크 가이드',
+    guide1Title:'단정적 표현',
+    guide1Body:'"보장된", "반드시 오를 것", "가장 안전한 투자" 등의 표현은 투자 위험을 오도할 수 있습니다.',
+    guide2Title:'수익률 주장',
+    guide2Body:'수익률, 초과 성과 언급 시 명확한 출처, 기간, 맥락 제시가 필요합니다.',
+    guide3Title:'과잉 일반화',
+    guide3Body:'"대부분의 투자자", "항상", "일반적으로" 등은 적절한 범위와 조건 명시가 필요합니다.',
+    // dynamic
+    statusReady:'준비 완료. 초안을 입력하고 분석하기를 클릭하세요.',
+    statusAnalyzing:'Claude API 호출 중...',
+    statusDone:(s,f)=>`분석 완료 · 문장 ${s}개 · 플래그 ${f}개`,
+    statusError:(m)=>`오류: ${m}`,
+    statusDemoLoaded:'데모 로드 완료. "분석하기"를 클릭하세요.',
+    statusNoApiKey:'API 키가 설정되지 않았습니다.',
+    summaryIdleTitle:'분석 대기 중',
+    summaryIdleBody:'초안을 입력하고 분석하기 버튼을 누르면 결과가 표시됩니다.',
+    summaryDoneTitle:(f)=> f===0 ? '이슈 없음' : `${f}개의 이슈 발견`,
+    summaryDoneBody:(s)=>s,
+    chipHigh:(n)=>`심각 ${n}`,chipMedium:(n)=>`주의 ${n}`,chipLow:(n)=>`낮음 ${n}`,
+    revisedPlaceholder:'분석 후 수정 초안이 여기에 표시됩니다.',
+    noFlags:'플래그 없음.',
+    noRevised:'수정 초안이 없습니다.',
+    sentence:(n)=>`문장 ${n}`, flag:(n)=>`플래그 ${n}`,
+    noCompliance:'이 문장에서 컴플라이언스 이슈가 발견되지 않았습니다.',
+    reason:'이유', revision:'수정 제안', guideBasis:'근거 원칙',
+    demoPersona:'개인 투자자', demoTopic:'S&P 500 ETF 기초',
+    demoMessage:'과잉 약속 없이 분산투자 효과 설명',
+    demoDraft:'S&P 500 ETF는 당신이 할 수 있는 가장 안전한 투자입니다. 지난 50년간 연 10% 수익을 꾸준히 달성해 왔으며, 모든 투자자에게 강한 성과를 보장합니다. 대부분의 금융 전문가들이 이것이 최선의 장기 투자 전략이라고 동의합니다. 지금 당장 포트폴리오에 추가해야 합니다.',
+  },
+  en:{
+    subtitle:'AI-powered financial content review',
+    loadDemo:'Load Demo',
+    cardInputTitle:'Draft Input',
+    lblAudience:'Target Audience', phAudience:'e.g., Retail investors',
+    lblTopic:'Topic', phTopic:'e.g., S&P 500 ETF basics',
+    lblMessage:'Key Message', phMessage:'e.g., Explain diversification benefits simply',
+    lblDraft:'Draft Content', phDraft:'Paste the content you want to review...',
+    helperDraft:'Sentences are split automatically based on punctuation.',
+    btnAnalyze:'Analyze',
+    panelOriginal:'Original', panelFeedback:'Feedback',
+    h2Revised:'Revised Draft', h2Flags:'Flags & Details', h2Guide:'Risk Guide',
+    guide1Title:'Deterministic Language',
+    guide1Body:'"Guaranteed", "will definitely rise", or "safest investment" can mislead readers about investment risks.',
+    guide2Title:'Performance Claims',
+    guide2Body:'Returns, outperformance, or historical performance require clear context, sources, and time periods.',
+    guide3Title:'Overgeneralization',
+    guide3Body:'"Most investors", "always", or "typically" need proper qualification and scope.',
+    statusReady:'Ready. Enter your draft and click Analyze.',
+    statusAnalyzing:'Calling Claude API...',
+    statusDone:(s,f)=>`Analysis complete · ${s} sentences · ${f} flags`,
+    statusError:(m)=>`Error: ${m}`,
+    statusDemoLoaded:'Demo loaded. Click "Analyze" to review.',
+    statusNoApiKey:'API key is not configured.',
+    summaryIdleTitle:'Awaiting analysis',
+    summaryIdleBody:'Enter a draft and click Analyze to see results here.',
+    summaryDoneTitle:(f)=>f===0?'No issues found':`${f} issue${f>1?'s':''} found`,
+    summaryDoneBody:(s)=>s,
+    chipHigh:(n)=>`High ${n}`,chipMedium:(n)=>`Medium ${n}`,chipLow:(n)=>`Low ${n}`,
+    revisedPlaceholder:'Revised draft will appear here after analysis.',
+    noFlags:'No flags found.',
+    noRevised:'No revised draft available.',
+    sentence:(n)=>`Sentence ${n}`, flag:(n)=>`Flag ${n}`,
+    noCompliance:'No compliance issues flagged for this sentence.',
+    reason:'Reason', revision:'Suggested Revision', guideBasis:'Guide Basis',
+    demoPersona:'Retail investors', demoTopic:'S&P 500 ETF Basics',
+    demoMessage:'Explain diversification benefits without overpromising',
+    demoDraft:'The S&P 500 ETF is the safest investment you can make. It has consistently delivered 10% annual returns over the past 50 years, guaranteeing strong performance for all investors. Most financial advisors agree that this is the best long-term investment strategy. You should definitely add this to your portfolio immediately.',
+  }
+};
+
+const PROMPT = {
+  ko:(persona,topic,msg,draft)=>`당신은 한국어 금융 콘텐츠 AI 컴플라이언스 검토자입니다. 독자를 오도할 표현을 문장 단위로 플래그하세요.
+
+입력:
+- 대상 독자: ${persona}
+- 주제: ${topic}
+- 핵심 메시지: ${msg}
+- 초안: ${draft}
+
+규칙: 승인/거부 판단 금지. 플래그, 이유, 수정 제안만 제공. 문장 단위 분석. "sentence" 필드에 원문 그대로 포함. sentence_index(1부터). revised_draft는 플래그된 모든 문장을 반영한 완전한 초안으로 작성.
+
+JSON 형식으로만 응답:
+{"summary":"이슈 요약","flags":[{"sentence":"원문 문장","sentence_index":1,"risk_type":"promissory_language|performance_claim|misleading_framing|factual_verification|overgeneralization|disclosure_gap","severity":"high|medium|low","reason":"이유","suggested_revision":"수정 문장","guide_basis":"관련 원칙"}],"revised_draft":"수정된 전체 초안"}`,
+  en:(persona,topic,msg,draft)=>`You are an AI compliance reviewer for financial content. Flag expressions that could mislead readers at the sentence level.
+
+Input:
+- Target Audience: ${persona}
+- Topic: ${topic}
+- Key Message: ${msg}
+- Draft: ${draft}
+
+Rules: No approve/reject. Only flags, reasons, suggested revisions. Sentence-level analysis. Include exact sentence text in "sentence". 1-based sentence_index. revised_draft must be the complete corrected draft.
+
+Respond ONLY with JSON:
+{"summary":"summary","flags":[{"sentence":"exact sentence","sentence_index":1,"risk_type":"promissory_language|performance_claim|misleading_framing|factual_verification|overgeneralization|disclosure_gap","severity":"high|medium|low","reason":"reason","suggested_revision":"revision","guide_basis":"principle"}],"revised_draft":"complete revised draft"}`
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let lang = 'ko';
+const s = (key,...a)=>{ const v=STR[lang][key]; return typeof v==='function'?v(...a):(v??key); };
+
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const persona=$('persona'),topic=$('topic'),message=$('message'),draft=$('draft');
+
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+function applyLang(){
+  const ko=lang==='ko';
+  document.documentElement.lang=lang;
+  $('lblKo').classList.toggle('on',ko);
+  $('lblEn').classList.toggle('on',!ko);
+  $('subtitle').textContent          = s('subtitle');
+  $('loadDemoBtn').textContent        = s('loadDemo');
+  $('cardInputTitle').textContent     = s('cardInputTitle');
+  $('lblAudience').textContent        = s('lblAudience');
+  persona.placeholder                 = s('phAudience');
+  $('lblTopic').textContent           = s('lblTopic');
+  topic.placeholder                   = s('phTopic');
+  $('lblMessage').textContent         = s('lblMessage');
+  message.placeholder                 = s('phMessage');
+  $('lblDraft').textContent           = s('lblDraft');
+  draft.placeholder                   = s('phDraft');
+  $('helperDraft').textContent        = s('helperDraft');
+  $('btnAnalyzeLabel').textContent    = s('btnAnalyze');
+  $('panelOriginal').textContent      = s('panelOriginal');
+  $('panelFeedback').textContent      = s('panelFeedback');
+  $('h2Revised').textContent          = s('h2Revised');
+  $('h2Flags').textContent            = s('h2Flags');
+  $('h2Guide').textContent            = s('h2Guide');
+  $('guide1Title').textContent        = s('guide1Title');
+  $('guide1Body').textContent         = s('guide1Body');
+  $('guide2Title').textContent        = s('guide2Title');
+  $('guide2Body').textContent         = s('guide2Body');
+  $('guide3Title').textContent        = s('guide3Title');
+  $('guide3Body').textContent         = s('guide3Body');
+  setStatus(s('statusReady'));
+  setSummaryIdle();
+  setRevisedPlaceholder();
+}
+
+// ─── Status ───────────────────────────────────────────────────────────────────
+function setStatus(msg,type='',showSpinner=false){
+  const bar=$('statusBar');
+  bar.className='statusbar'+(type?' '+type:'');
+  bar.innerHTML=showSpinner?`<div class="spinner"></div>${esc(msg)}`:esc(msg);
+}
+function esc(str){return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+// ─── Summary ──────────────────────────────────────────────────────────────────
+function setSummaryIdle(){
+  $('summaryIcon').className='summary-icon idle';
+  $('summaryIcon').innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  $('summaryTitle').textContent=s('summaryIdleTitle');
+  $('summaryBody').textContent=s('summaryIdleBody');
+  $('statChips').style.display='none';
+}
+
+function setSummaryResult(data,flags){
+  const high=flags.filter(f=>f.severity==='high').length;
+  const med=flags.filter(f=>f.severity==='medium').length;
+  const low=flags.filter(f=>f.severity==='low').length;
+  const iconType=high>0?'err':med>0?'warn':'ok';
+  const iconSvg={
+    ok:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    warn:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    err:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+  }[iconType];
+  $('summaryIcon').className=`summary-icon ${iconType}`;
+  $('summaryIcon').innerHTML=iconSvg;
+  $('summaryTitle').textContent=s('summaryDoneTitle',flags.length);
+  $('summaryBody').textContent=s('summaryDoneBody',data.summary||'');
+  const chips=$('statChips');
+  chips.innerHTML='';
+  chips.style.display='flex';
+  if(high) chips.insertAdjacentHTML('beforeend',`<span class="stat-chip red">${esc(s('chipHigh',high))}</span>`);
+  if(med)  chips.insertAdjacentHTML('beforeend',`<span class="stat-chip yellow">${esc(s('chipMedium',med))}</span>`);
+  if(low)  chips.insertAdjacentHTML('beforeend',`<span class="stat-chip green">${esc(s('chipLow',low))}</span>`);
+  if(!high&&!med&&!low) chips.style.display='none';
+}
+
+function setRevisedPlaceholder(){
+  const box=$('revisedDraftBox');
+  box.textContent=s('revisedPlaceholder');
+  box.classList.remove('has-content');
+}
+
+// ─── Sentence utils ───────────────────────────────────────────────────────────
+function splitSentences(text){
+  const raw=(text||'').replace(/\r/g,'\n').trim();
+  if(!raw) return [];
+  return raw.replace(/\n+/g,' ').replace(/\s+/g,' ')
+    .replace(/([.!?。！？])\s+/g,'$1\n')
+    .split(/\n+/).map(x=>x.trim()).filter(Boolean);
+}
+function norm(t){return(t||'').replace(/\s+/g,' ').trim()}
+function soft(t){return norm(t).replace(/["'""''.,!?()[\]{}:;。，！？]/g,'').toLowerCase()}
+
+function buildLookup(flags,sentences){
+  const byIdx=new Map(),byExact=new Map(),bySoft=new Map();
+  flags.forEach(f=>{
+    const i=Number(f.sentence_index);
+    if(Number.isInteger(i)&&i>0) byIdx.set(i-1,f);
+    if(f.sentence){byExact.set(norm(f.sentence),f);bySoft.set(soft(f.sentence),f);}
+  });
+  const out=new Map();
+  sentences.forEach((sent,i)=>{
+    if(byExact.has(norm(sent))) return out.set(i,byExact.get(norm(sent)));
+    if(byIdx.has(i)) return out.set(i,byIdx.get(i));
+    const sk=soft(sent);
+    if(bySoft.has(sk)) return out.set(i,bySoft.get(sk));
+    for(const[k,f] of bySoft){if(k&&sk&&(k.includes(sk)||sk.includes(k))){out.set(i,f);return;}}
+  });
+  return out;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderOriginal(sentences,matched){
+  const el=$('originalList');
+  el.innerHTML='';
+  if(!sentences.length){el.innerHTML=`<div class="empty">${s('noCompliance')}</div>`;return;}
+  sentences.forEach((txt,i)=>{
+    const d=document.createElement('div');
+    d.className='sent-item'+(matched.get(i)?' flagged':'');
+    d.innerHTML=`<span class="sent-num">${s('sentence',i+1)}</span>${esc(txt)}`;
+    el.appendChild(d);
+  });
+}
+
+function renderFeedback(sentences,matched){
+  const el=$('feedbackList');
+  el.innerHTML='';
+  if(!sentences.length){el.innerHTML=`<div class="empty">${s('noCompliance')}</div>`;return;}
+  sentences.forEach((txt,i)=>{
+    const flag=matched.get(i);
+    const d=document.createElement('div');
+    if(!flag){
+      d.className='fb-item';
+      d.innerHTML=`<span class="sent-num">${s('sentence',i+1)}</span><span class="fb-clean">${s('noCompliance')}</span>`;
+    } else {
+      const sev=(flag.severity||'low').toLowerCase();
+      d.className=`fb-item ${sev}`;
+      d.innerHTML=`<span class="sent-num">${s('sentence',i+1)}</span>
+        <p><strong>${s('reason')}:</strong> ${esc(flag.reason||'-')}</p>
+        <p><strong>${s('revision')}:</strong> ${esc(flag.suggested_revision||'-')}</p>
+        <p><strong>${s('guideBasis')}:</strong> ${esc(flag.guide_basis||'-')}</p>`;
+    }
+    el.appendChild(d);
+  });
+}
+
+function renderRevised(data,flags){
+  const box=$('revisedDraftBox');
+  const rev=(data.revised_draft||'').trim();
+  const fallback=flags.map(f=>f.suggested_revision).filter(Boolean).join(' ');
+  const text=rev||fallback||s('noRevised');
+  box.textContent=text;
+  box.classList.toggle('has-content',!!(rev||fallback));
+}
+
+function renderFlags(flags){
+  const el=$('flagList');
+  el.innerHTML='';
+  if(!flags.length){el.innerHTML=`<div class="empty">${s('noFlags')}</div>`;return;}
+  flags.forEach((flag,i)=>{
+    const sev=(flag.severity||'low').toLowerCase();
+    const d=document.createElement('div');
+    d.className='flag-item';
+    d.innerHTML=`
+      <div class="flag-meta">
+        <span class="badge ${sev}">${esc((flag.severity||'low').toUpperCase())}</span>
+        <span class="badge type">${esc(flag.risk_type||'unknown')}</span>
+        <span style="font-size:11px;color:var(--faint)">${s('flag',i+1)}</span>
+      </div>
+      <div class="flag-quote">${esc(flag.sentence||'')}</div>
+      <div class="flag-detail"><strong>${s('reason')}:</strong> ${esc(flag.reason||'-')}</div>
+      <div class="flag-detail"><strong>${s('revision')}:</strong> ${esc(flag.suggested_revision||'-')}</div>
+      <div class="flag-detail"><strong>${s('guideBasis')}:</strong> ${esc(flag.guide_basis||'-')}</div>`;
+    el.appendChild(d);
+  });
+}
+
+// ─── JSON extract ─────────────────────────────────────────────────────────────
+function extractJson(raw){
+  if(!raw) return null;
+  const fenced=raw.match(/```json\s*([\s\S]*?)```/i)||raw.match(/```\s*([\s\S]*?)```/i);
+  if(fenced) return fenced[1].trim();
+  const start=raw.indexOf('{'); if(start===-1) return null;
+  let depth=0,inStr=false,esc_=false;
+  for(let i=start;i<raw.length;i++){
+    const c=raw[i];
+    if(inStr){if(esc_)esc_=false;else if(c==='\\')esc_=true;else if(c==='"')inStr=false;continue;}
+    if(c==='"')inStr=true;else if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0)return raw.slice(start,i+1);}
+  }
+  return null;
+}
+
+// ─── API Key Management ───────────────────────────────────────────────────────
+function getApiKey(){ return localStorage.getItem('kupa_api_key')||''; }
+function getModel(){ return localStorage.getItem('kupa_model')||'claude-sonnet-4-6'; }
+
+function openApiKeyDialog(){
+  const overlay=$('apiKeyOverlay');
+  overlay.style.display='flex';
+  $('apiKeyInput').value=getApiKey();
+  $('modelSelect').value=getModel();
+  $('apiKeyInput').focus();
+}
+function closeApiKeyDialog(){
+  $('apiKeyOverlay').style.display='none';
+}
+function saveApiKey(){
+  const key=$('apiKeyInput').value.trim();
+  const model=$('modelSelect').value;
+  if(key) localStorage.setItem('kupa_api_key',key);
+  localStorage.setItem('kupa_model',model);
+  updateApiKeyBtnState();
+  closeApiKeyDialog();
+}
+function updateApiKeyBtnState(){
+  const btn=$('apiKeyBtn');
+  const hasKey=!!getApiKey();
+  btn.style.borderColor=hasKey?'var(--ok)':'var(--err)';
+  btn.style.color=hasKey?'var(--ok)':'var(--err)';
+}
+document.addEventListener('click', e=>{
+  if(e.target===$('apiKeyOverlay')) closeApiKeyDialog();
+});
+
+// ─── Analyze ──────────────────────────────────────────────────────────────────
+async function analyze(){
+  const apiKey=getApiKey();
+  if(!apiKey){
+    openApiKeyDialog();
+    setStatus(s('statusNoApiKey'),'err');
+    return;
+  }
+  const draftVal=draft.value.trim();
+  if(!draftVal){ setStatus(s('statusReady'),'warn'); return; }
+  setStatus(s('statusAnalyzing'),'',true);
+  $('analyzeBtn').disabled=true;
+
+  const promptText=PROMPT[lang](
+    persona.value||'-', topic.value||'-', message.value||'-', draftVal
+  );
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model: getModel(),
+        max_tokens:4096,
+        messages:[{role:'user',content:promptText}]
+      })
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||`HTTP ${res.status}`); }
+    const apiData=await res.json();
+    const rawText=apiData.content[0].text;
+    const jsonText=extractJson(rawText);
+    if(!jsonText) throw new Error('JSON not found in response');
+    const data=JSON.parse(jsonText);
+    const sentences=splitSentences(draftVal);
+    const flags=Array.isArray(data.flags)?data.flags:[];
+    const matched=buildLookup(flags,sentences);
+    renderOriginal(sentences,matched);
+    renderFeedback(sentences,matched);
+    renderRevised(data,flags);
+    renderFlags(flags);
+    setSummaryResult(data,flags);
+    setStatus(s('statusDone',sentences.length,flags.length),'ok');
+  } catch(e){
+    setStatus(s('statusError',e.message),'err');
+    setSummaryIdle();
+  } finally {
+    $('analyzeBtn').disabled=false;
+  }
+}
+
+// ─── Demo ─────────────────────────────────────────────────────────────────────
+function loadDemo(){
+  persona.value=s('demoPersona');
+  topic.value=s('demoTopic');
+  message.value=s('demoMessage');
+  draft.value=s('demoDraft');
+  setStatus(s('statusDemoLoaded'),'warn');
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+function toggleTheme(){
+  const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  const icon=$('themeIcon');
+  if(next==='dark'){
+    icon.innerHTML=`<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+  } else {
+    icon.innerHTML=`<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  }
+}
+
+// ─── Wire ─────────────────────────────────────────────────────────────────────
+function init(){
+  $('analyzeBtn').addEventListener('click',analyze);
+  $('loadDemoBtn').addEventListener('click',loadDemo);
+  $('themeToggle').addEventListener('click',toggleTheme);
+  $('langToggle').addEventListener('change',()=>{
+    lang=$('langToggle').checked?'en':'ko';
+    applyLang();
+  });
+  applyLang();
+  setSummaryIdle();
+  setRevisedPlaceholder();
+  updateApiKeyBtnState();
+  if(!getApiKey()) setTimeout(openApiKeyDialog, 400); // 처음 열면 자동으로 API 키 다이얼로그 표시
+  $('originalList').innerHTML=`<div class="empty">${STR.ko.summaryIdleBody}</div>`;
+  $('feedbackList').innerHTML=`<div class="empty">${STR.ko.summaryIdleBody}</div>`;
+  $('flagList').innerHTML=`<div class="empty">${STR.ko.noFlags}</div>`;
+}
+
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
+</script>
+</body>
+</html>
